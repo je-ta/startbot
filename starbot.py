@@ -22,14 +22,14 @@ sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 num = 1000
 # ブックマークキーワード
 # この文字を含む記事のみブックマークする('|'区切りでいくつも設定可能)
-key = re.compile(r"映画|レビュー|感想|BUMP|bump|Bump|バンプ")
+key = re.compile(r"webサービス|モバイル|モンスターハンター|モンハン|PYTHON|Python|python|電気|電子|パーツ|ノートパソコン|PC|スマホ|タブレット|映画|レビュー|感想|BUMP|bump|Bump|バンプ")
 # タグ設定
 # タグ名:[タグワード]で設定する。
 # タグワードを複数指定することができる。
 # ++は必須条件。-0はor条件
 # 下の例だと記事に「映画」と「レビュー」か「感想」という言葉が入ってる記事を「映画(レビュー)」というタグでブックマーク。
 # -0,-1と設定することで XXX AND XXX OR XXX OR XXX AND XXX OR XXX みたいな条件でブックマークできる。
-tag = {"映画(レビュー)":["++映画","-0レビュー","-0感想"],"バンプ":["-0BUMP","-0bump","-0Bump","-0バンプ"]}
+tagset = {"webサービス":["++webサービス"],"モンハン":["-0モンスターハンター","-0モンハン"],"python":["-0PYTHON","-0Python","-0python"],"レビュー(ガッジェット)":["++レビュー","-0モバイル","-0パーツ","-0PC","-0スマホ","-0タブレット","-0電子","-0電気"],"映画":["++映画","-0レビュー","-0感想"],"バンプ":["-0BUMP","-0bump","-0Bump","-0バンプ"]}
 # はてなユーザー名
 user = 'XXX'
 # はてなパスワード
@@ -86,12 +86,12 @@ time.sleep(3)
 
 
 # タグ生成関数
-def getTag(tag,datas):
+def getTag(tags,datas):
     temp1 = ''
-    temp2 = []
     # タグ数文ループ
-    for tag,word in tag.items():
+    for tag,word in tags.items():
         #リストの場合
+        temp2 = []
         Flag = True
         if isinstance(word, list):
             for w in word :
@@ -104,8 +104,8 @@ def getTag(tag,datas):
                         temp2.append(False)
                     if w[2:] in datas:
                         temp2[int(w[1:2])]=True
-                if temp2.count(False) == 0:
-                    Flag = True
+                if temp2.count(False) > 0:
+                    Flag = False
         #1単語の場合
         else :
             if word[2:] not in datas:
@@ -169,18 +169,19 @@ while True:
                 # 本文のキーワードを判定
                 MatchObject = re.findall(key, hon)
                 tagkey = getTagKeyList(MatchObject)
+                inputTag = getTag(tagset,tagkey)
 
                 # 条件にマッチするならブックマーク&スターをつける
-                if len(hon) > num and getTag(tag,tagkey) is not '':
+                if len(hon) > num and inputTag is not '':
 
                     # ブックマーク処理
                     if bookmarkFlg :
                         browser.get(bookmark1 + user + bookmark2 + str(url))
 
                         # タグ設定
-                        print(str(getTag(tag,tagkey)), flush=True)
+                        print(str(inputTag), flush=True)
                         elementComment = browser.find_element_by_name("comment")
-                        elementComment.send_keys(str(getTag(tag,tagkey)))
+                        elementComment.send_keys(str(inputTag))
 
                         # ブックマーク
                         time.sleep(1)
