@@ -19,14 +19,21 @@ sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 ########################################
 # 文字数制限
 # この文字数以下はブックマークしない
-num = 500
+num = 1000
 # ブックマークキーワード
 # この文字を含む記事のみブックマークする('|'区切りでいくつも設定可能)
-key = re.compile(r"バンプ|BUMP|python|Python|PYTHON|プログラム|くりぃむ|作曲|モンハン|モンスターハンター|HUNTER|哲学|ガジェット|webサービス|映画|心理|ソロギター|レビュー")
+key = re.compile(r"映画|レビュー|感想|BUMP|bump|Bump|バンプ")
+# タグ設定
+# タグ名:[タグワード]で設定する。
+# タグワードを複数指定することができる。
+# ++は必須条件。-0はor条件
+# 下の例だと記事に「映画」と「レビュー」か「感想」という言葉が入ってる記事を「映画(レビュー)」というタグでブックマーク。
+# -0,-1と設定することで XXX AND XXX OR XXX OR XXX AND XXX OR XXX みたいな条件でブックマークできる。
+tag = {"映画(レビュー)":["++映画","-0レビュー","-0感想"],"バンプ":["-0BUMP","-0bump","-0Bump","-0バンプ"]}
 # はてなユーザー名
-user = 'XXXXXX'
+user = 'XXX'
 # はてなパスワード
-passWord = 'XXXXXX'
+passWord = 'XXX'
 # スターフラグ
 # ブックマークはしたいけど、スターはつけたくない場合とかに使う
 # スターをつけたい場合は True
@@ -38,7 +45,7 @@ starFlg = True
 # ブックマークしたくない場合は False
 bookmarkFlg = True
 # ダウンロードしたブラウザのパス(ダウンロードしたchromedriver.exeのパスを記入ください)
-chromedriver = "XXXXXX"
+chromedriver = "XXX"
 
 ########################################
 # 固定値                                #
@@ -79,11 +86,39 @@ time.sleep(3)
 
 
 # タグ生成関数
-def getTag(datas):
+def getTag(tag,datas):
     temp1 = ''
+    temp2 = []
+    # タグ数文ループ
+    for tag,word in tag.items():
+        #リストの場合
+        Flag = True
+        if isinstance(word, list):
+            for w in word :
+                if w[:2] == '++':
+                    if w[2:] not in datas:
+                        Flag = False
+                        break
+                if w[:1] == '-':
+                    if (int(w[1:2])+1) != int(len(temp2)):
+                        temp2.append(False)
+                    if w[2:] in datas:
+                        temp2[int(w[1:2])]=True
+                if temp2.count(False) == 0:
+                    Flag = True
+        #1単語の場合
+        else :
+            if word[2:] not in datas:
+                Flag = False
+        if Flag :
+            temp1 = temp1 + '[' + str(tag) + ']'
+    return temp1
+
+def getTagKeyList(datas):
+    temp1 = []
     for temp in datas:
-        if temp1.find(temp) == -1:
-            temp1 = temp1 + '[' + str(temp) + ']'
+        if temp not in temp1:
+            temp1.append(str(temp))
     return temp1
 
 # 無限ループ
@@ -133,18 +168,19 @@ while True:
 
                 # 本文のキーワードを判定
                 MatchObject = re.findall(key, hon)
+                tagkey = getTagKeyList(MatchObject)
 
                 # 条件にマッチするならブックマーク&スターをつける
-                if len(hon) > num and MatchObject != []:
+                if len(hon) > num and getTag(tag,tagkey) is not '':
 
                     # ブックマーク処理
                     if bookmarkFlg :
                         browser.get(bookmark1 + user + bookmark2 + str(url))
 
                         # タグ設定
-                        print(str(getTag(MatchObject)), flush=True)
+                        print(str(getTag(tag,tagkey)), flush=True)
                         elementComment = browser.find_element_by_name("comment")
-                        elementComment.send_keys(str(getTag(MatchObject)))
+                        elementComment.send_keys(str(getTag(tag,tagkey)))
 
                         # ブックマーク
                         time.sleep(1)
